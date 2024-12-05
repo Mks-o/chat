@@ -13,9 +13,6 @@ or download controller in docker pull mksrt/chat:controller
   sql database in default localhost:3036
   controller work on localhost:3015
 
-  
-![image](https://github.com/user-attachments/assets/ac070db4-53c8-4e6b-a48f-a211abf268c0)
-
 login form
 ![image](https://github.com/user-attachments/assets/6a8ffc09-ca60-46ee-9baf-16dcb024dbce)
 
