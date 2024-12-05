@@ -14,3 +14,18 @@ or download controller in docker pull mksrt/chat:controller
   controller work on localhost:3015
 
   
+![image](https://github.com/user-attachments/assets/ac070db4-53c8-4e6b-a48f-a211abf268c0)
+
+login form
+![image](https://github.com/user-attachments/assets/6a8ffc09-ca60-46ee-9baf-16dcb024dbce)
+
+
+![image](https://github.com/user-attachments/assets/f4575cb0-4961-4622-b55c-911b53d11d6d)
+
+
+Dowload custom icons in chat
+
+![image](https://github.com/user-attachments/assets/e60a8c97-aa6a-4a91-a3c9-0a92cb278a13)
+
+![image](https://github.com/user-attachments/assets/a090f2e2-9483-4d0a-9d3f-4d29680c26a3)
+
