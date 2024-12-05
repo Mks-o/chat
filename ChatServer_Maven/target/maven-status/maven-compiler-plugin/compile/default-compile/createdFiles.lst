@@ -1,0 +1,10 @@
+application\core\ClientHandler.class
+application\core\Server.class
+application\core\ClientHandler$2.class
+application\core\SQL_core.class
+application\entities\User.class
+application\entities\Icon.class
+application\core\ClientHandler$1.class
+application\WebSocketServer.class
+application\utils\helpfull_voids.class
+application\utils\Constants.class

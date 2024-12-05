@@ -1,0 +1,32 @@
+services:
+  chat:
+    image: mksrt/chat:controller
+    container_name: chat-controller
+    restart: always
+    depends_on:
+      - db
+      - front_client1
+      - front_client2
+    ports:
+      - "3015:3015"
+  db:
+    image: mysql
+    container_name: db
+    hostname: db
+    environment:
+      - MYSQL_ROOT_USER=root
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=chat
+    ports:
+      - "3306:3306"
+    restart: always
+  front_client1:
+    image: mksrt/chat:front
+    container_name: chat-front1
+    ports:
+      - "8081:8081"
+  front_client2:
+    image: mksrt/chat:front
+    container_name: chat-front2
+    ports:
+      - "8082:8081"

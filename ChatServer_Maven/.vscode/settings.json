@@ -1,0 +1,21 @@
+{
+    "maven.view": "flat",
+    "maven.terminal.favorites": [
+        {
+            "command": "clean install -DSkiptest",
+            "debug": false
+        },
+        {
+            "command": "clean install -DskipTests",
+            "debug": false
+        },
+        {
+            "command": "mvn clean compile assembly:single",
+            "debug": false
+        },
+        {
+            "command": "clean compile assembly:single",
+            "debug": false
+        }
+    ]
+}
