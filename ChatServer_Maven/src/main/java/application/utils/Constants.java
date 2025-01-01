@@ -27,7 +27,7 @@ public class Constants {
         public static final String USER_LEFT_CHAT_TEMPLATE = SERVER_PREFIX + "'%s' has left chat!",
                         SEND_FILE_PREF = "file::'%s'::'%s'",
                         CHANGE_PROTOCOL = "::change_protocol::";
-        public static Icon[] icons = {
+        public static Icon[] defaultIcons = {
                         new Icon(" -@#&- ",
                                         "https://cdn3.iconfinder.com/data/icons/free-icons-3/512/red_matreshka_big.png"),
                         new Icon(" -$#&- ",

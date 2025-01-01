@@ -8,6 +8,7 @@ export function mapLinks(collection, title) {
         })}
     </div>
 }
+
 export function mapsomething(collection, title) {
     return <div className="d-block alert border border-dark"> {title}
         {collection.map((x, i) => {
@@ -57,7 +58,7 @@ export const checkMessage = (checked_message, name, setResiveMessage) => {
             return <img key={i} alt='img' src={icons.find(d => d.simvol === sep).src} onClick={() => setResiveMessage ? remove(checked_message, i, setResiveMessage) : null} />
         }
         else if (x.includes('http')) {
-          return renderHtml(x, i);
+            return renderHtml(x, i);
         }
         else if (x !== " " && x !== "") {
             return <span key={i} className={checkStyle(x, name)} onClick={() => setResiveMessage ? remove(checked_message, i, setResiveMessage) : null}>{x.replaceAll("'", "")}</span>
@@ -79,12 +80,15 @@ export const checkMessage = (checked_message, name, setResiveMessage) => {
     let r = <div id='container' className='container text-wrap'>{split}</div>;
     return r;
 }
-let renderHtml = (html,key) => {
+
+let renderHtml = (html, key) => {
     let href = html.split('|')[0];
-    let imgFilter = ['.gif','.ico','.jpeg','.png','.jpg'];
-    let soundFilter = ['.wav','.mp3','.ogg'];
-    let videoFilter = ['.mp4','.mov'];
+    let imgFilter = ['.gif', '.ico', '.jpeg', '.png', '.jpg'];
+    let soundFilter = ['.wav', '.mp3', '.ogg'];
+    let videoFilter = ['.mp4', '.mov'];
+
     let contentType = html.split('|')[1]?.replaceAll("'", "");
+    if (href) {
         if (html.includes("youtube.com/watch?v=")) {
             href = html.replace('watch?v=', 'embed/');
             return <div key={key}>
@@ -92,31 +96,33 @@ let renderHtml = (html,key) => {
                 <iframe className="w-100 h-100 border border-dark rounded" src={href} title={contentType}></iframe>
             </div>
         }
-        if (imgFilter.find(elem=>href.includes(elem))||imgFilter.find(elem=>contentType.includes(elem))) {
+        if (imgFilter.find(elem => href.includes(elem)) || imgFilter.find(elem => contentType.includes(elem))) {
             return <div key={key}>
-               <a className="ps-2" key={key} href={href} download={contentType} target='_blank' rel='noreferrer'>{contentType ? "download" : "link"}</a>
+                <a className="ps-2" key={key} href={href} download={contentType} target='_blank' rel='noreferrer'>{contentType ? "download" : "link"}</a>
                 <img className="sendedimg border border-dark rounded" src={href} alt={contentType} />
             </div>
-    
+
         }
-        if (soundFilter.find(elem=>contentType.includes(elem))||soundFilter.find(elem=>contentType.includes(elem))) {
+        if (soundFilter.find(elem => contentType.includes(elem)) || soundFilter.find(elem => contentType.includes(elem))) {
             return <div key={key}>
-               <a className="ps-2" key={key} href={href} download={contentType} target='_blank' rel='noreferrer'>{contentType ? "download" : "link"}</a>
+                <a className="ps-2" key={key} href={href} download={contentType} target='_blank' rel='noreferrer'>{contentType ? "download" : "link"}</a>
                 <audio id="audioPlayer" controls='controls' type={contentType} className="audioPlayer border border-dark rounded w-100" src={href} alt={contentType} />
             </div>
-    
+
         }
-        if (videoFilter.find(elem=>contentType?.includes(elem))||videoFilter.find(elem=>contentType.includes(elem))) {
+        if (videoFilter.find(elem => contentType?.includes(elem)) || videoFilter.find(elem => contentType.includes(elem))) {
             return <div key={key}>
                 <a className="ps-2" key={key} href={href} download={contentType} target='_blank' rel='noreferrer'>{contentType ? "download" : "link"}</a>
                 <video controls='controls' className=" border border-dark rounded w-100" src={href} alt={contentType} />
             </div>
-    
+
         }
+    }
     return <div key={key + 3} >
         <a className="ps-2" key={key} href={href} download={contentType} target='_blank' rel='noreferrer'>{contentType ? "download" : "link"}</a>
     </div>
 }
+
 let remove = (checked_message, index, setResiveMessage) => {
     let x = checked_message.split(" ");
     x.splice(index, 1);
@@ -127,10 +133,10 @@ async function uploadFile(file, webSocket) {
     const filesize = file.size;
     const size = 58 * 1024; //bytes;
     let chunks = [];
-    let name = file.name.replaceAll(' ', '');
-    if (!english.test(name.split('.')[0]))
-        name = "somefile." + name.split('.')[name.split('.').length - 1]
-    webSocket.fileData.filename = name;
+    let file_name = file.name.replaceAll(' ', '');
+    if (!english.test(file_name.split('.')[0]))
+        file_name = "somefile." + file_name.split('.')[file_name.split('.').length - 1];
+    webSocket.fileData.filename = file_name;
 
     webSocket.send(file_prefix + webSocket.fileData.filename + "::" + (file.type === "" ? "_" : file.type) + "::" + filesize);
     const chunksSize = Math.ceil(filesize / size);
@@ -138,8 +144,8 @@ async function uploadFile(file, webSocket) {
     for (let i = 0; i < filesize; i += size) {
         let start = i;
         let end = i + size > filesize ? filesize : i + size;
-        await file.slice(start, end).arrayBuffer().then(d =>
-            chunks.push(new Uint8Array(d)));
+        await file.slice(start, end).arrayBuffer().then(data =>
+            chunks.push(new Uint8Array(data)));
     }
     chunks.push('::^end^::')
     return chunks;
@@ -149,10 +155,10 @@ const send = async (chunks, webSocket, setProgress) => {
     for (let i = 0; i < chunks.length; i++) {
         setTimeout(() => {
             setProgress((i / (chunks.length - 1) * 100).toFixed(2))
-            if (i === chunks.length - 1){
+            if (i === chunks.length - 1) {
                 webSocket.fileData.data = [];
-                 setProgress(0)
-                }
+                setProgress(0)
+            }
 
             webSocket.send(chunks[i]);
         }, 20 * i);
@@ -163,35 +169,35 @@ export let send_file = async (event, webSocket, setProgress, clientname, setMess
     if (!event.currentTarget?.files[0]) return;
     const file_data = event.currentTarget.files[0];
     setProgress(1);
-    let name = file_data.name.replaceAll(' ', '');
-    if (!english.test(name.split('.')[0]))
-        name = "somefile." + name.split('.')[name.split('.').length - 1]
-    webSocket.fileData.filename = name;
-    const f = await uploadFile(file_data, webSocket);
+    let file_name = file_data.name.replaceAll(' ', '');
+    if (!english.test(file_name.split('.')[0]))//get name with out extension and check it contains only english latters
+        file_name = "somefile." + file_name.split('.')[file_name.split('.').length - 1]//get extension of file
+    webSocket.fileData.filename = file_name;
+    const file = await uploadFile(file_data, webSocket);
     if (webSocket.fileData.fileExists) await send([file_end_load], webSocket, setProgress);
-    else await send(f, webSocket, setProgress);
-    const f_data = f.slice(0, f.length - 1);
-    let blob = downloadFile(name, f_data,//await
-        file_data.type === "" ? "_" : file_data.type);
-    setMessageHistory(date(new Date()) + " " + clientname + ": file " + name + " " + blob.href + '|' + blob.download);
+    else await send(file, webSocket, setProgress);
+    const f_data = file.slice(0, file.length - 1);
+    let blob = downloadFile(file_name, f_data, file_data.type === "" ? "_" : file_data.type);
+    setMessageHistory(date(new Date()) + " " + clientname + ": file " + file_name + " " + blob.href + '|' + blob.download);
     webSocket.clear();
     setProgress(0);
 }
 
 export let downloadFile = (name, data, content_type) => {
-    let a = document.createElement("a");
-    if (typeof a.download !== "undefined") a.download = name;
-    let z = new Blob(data, { type: { content_type } });
+    let link = document.createElement("a");
+    if (typeof link.download !== "undefined") link.download = name;
+    let blob = new Blob(data, { type: { content_type } });
 
-    a.href = URL.createObjectURL(z);
-    a.textContent = name;
+    link.href = URL.createObjectURL(blob);
+    link.textContent = name;
     //a.dispatchEvent(new MouseEvent("click"));
-    return a;
+    return link;
 }
 
 export const messageColor = (mes) => {
     return (mes.includes('Server: ')) ? 'alert alert-info' : 'alert alert-secondary'
 }
+
 export async function fetch_something(url, body_value, method) {
     let headers_values = {
         headers: set_headers(),
@@ -219,6 +225,7 @@ export const set_headers = (auth) => {
     if (auth != null) headers.Authorization = auth
     return headers;
 }
+
 //www.w3 method
 export function dragElement(elmnt) {
     var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
@@ -311,7 +318,8 @@ export let createWebSocket = () => {
 
     return webSocket;
 }
-export const recreatewebSocket = (webSocket, dispatch) => {
+
+export const recreatewebSocket = (webSocket) => {
     if (!webSocket.OPEN)
-        webSocket = createWebSocket(dispatch);
+        webSocket = createWebSocket();
 }

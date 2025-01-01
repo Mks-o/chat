@@ -16,8 +16,9 @@ import java.util.Arrays;
 
 
 public class SQL_core {
-
-	String url = System.getenv("JDBC_DATABASE_URL")!=null?System.getenv("JDBC_DATABASE_URL"):"jdbc:mysql://db:3306/chat?createDatabaseIfNotExist=true";
+	String url = 
+	// "jdbc:mysql://db:3306/chat?createDatabaseIfNotExist=true";
+	"jdbc:mysql://localhost:3306/chat?createDatabaseIfNotExist=true";
 	private static String username = "root";
 	private static String password = "root";
 
@@ -25,23 +26,21 @@ public class SQL_core {
 		try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {
-            System.out.println("MySQL JDBC Driver not found");
-            e.printStackTrace();
+            log_err(log_enable,"SQL","MySQL JDBC Driver not found "+e.getMessage());
             return;
         }
 
-        System.out.println("MySQL JDBC Driver Registered!");
+        log(log_enable,"SQL","MySQL JDBC Driver Registered!");
 		Init();
 	}
 
 	Connection createConnection() {
-		System.out.println(url);
 		Connection conn = null;
 		try {
 			conn = DriverManager.getConnection(url,username,password);
-					return conn;
+				return conn;
 		} catch (Exception ex) {
-			System.out.println("SQLException: " + ex.getMessage());
+			log_err(log_enable,"SQL","SQLException: " + ex.getMessage());
 			return null;
 		}
 	}

@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setColor, setSecondColor, setThirdColor } from '../redux/slices/colorsSlice';
 import { setShowAllIcons, setShowText, showControls, showHelp, showRes } from '../redux/slices/settingsSlice';
 import { history_l, history_m, m_card_f, settings_b, settings_b_d, settings_b_i, settings_c, settings_h_ul } from '../constants/bootStrapStyles';
-import { res_icon, settings_icon, help_icon, logout_icon } from './helpfullIcons';
+import { res_icon, settings_icon, help_icon, logout_icon } from '../constants/form_Icons';
 import { controlsTxt, helpInfoTxt, helpTxt, logOutTxt, maincolorTxt, resLinksTxt, resTxt, secondcolorTxt, showIconsBTxt, showTextBTxt, thirdcolorTxt } from '../constants/elementsText';
 const HistoryComponent = () => {
   const color = useSelector(state => state.color)

@@ -12,11 +12,13 @@ const Register = () => {
     const { webSocket } = useContext(app_context);
     const showText = useSelector(state => state.settings.showText);
     const dispatch = useDispatch();
+    
     const userName = React.createRef();
     const secondName = React.createRef();
     const mail = React.createRef();
     const login = React.createRef();
     const password = React.createRef();
+
     //webSocket.onopen();
     let createAccount = (e) => {
         e.preventDefault();
@@ -48,6 +50,7 @@ const Register = () => {
             return;
         }
     }
+    
     return (
         <form className={reg_form} onSubmit={(e) => createAccount(e)}>
             <div className='input-group-mb-2'>

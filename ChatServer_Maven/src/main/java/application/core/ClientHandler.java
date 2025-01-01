@@ -35,44 +35,61 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import application.entities.Icon;
 import application.entities.User;
+import application.utils.helpfull_voids;
 
 import static application.utils.Constants.*;
 import static application.utils.helpfull_voids.*;
 
 public class ClientHandler implements Runnable {
-	private boolean is_file_send,
+	//#region values
+	private boolean 
+			is_file_send,
 			is_file_send_to_others,
 			is_file_alredy_exists,
-			showVideo,
-			stream;
-	private static String fileName = "",
-			content_type = "",
-			videoframe = "",
-			sec_k = "",
-			origin = "";
+			show_video,
+			is_streaming;
 
+	private static String 
+			file_name = "",
+			content_type = "",
+			video_frame = "",
+			secret_k = "",
+			origin = "";
+	
+	private long file_size = 0;
+	
+	private String clientUserName = "";
+			
 	private static ReentrantReadWriteLock LOCK = new ReentrantReadWriteLock(true);
+	
 	// private Lock READ_LOCK = LOCK.readLock();
+	
 	private Lock WRITE_LOCK = LOCK.writeLock();
+
 	private JsonMapper mapper = JsonMapper.builder()
 			.configure(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION, true)
 			.enable(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT)
 			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false).build();
+	
 	Socket socket;
+	
 	protected InputStream input;
+
 	private OutputStream output;
 
-	private String clientUserName = "";
-	long file_size = 0;
+	//#endregion
 
 	public ClientHandler(Socket socket) {
 		try {
 			this.socket = socket;
 			socket.setReceiveBufferSize(32 * 1024);
 			socket.setSendBufferSize(32 * 1024);
+
 			this.input = socket.getInputStream();
 			this.output = socket.getOutputStream();
+			
 			this.clientUserName = START_CLIENT_NAME;
+			
 			Thread disconect = new Thread() {
 				@Override
 				public void run() {
@@ -94,17 +111,18 @@ public class ClientHandler implements Runnable {
 			};
 			disconect.setDaemon(true);
 			disconect.start();
+			
 			mapper.findAndRegisterModules();
+			
 			try {
 				doHandShakeToInitializeWebSocketConnection(input, output);
 				log(log_enable, "CONSTRUCTOR", "Create new user");
 			} catch (UnsupportedEncodingException handShakeException) {
-				log(log_enable, "handShakeException", "Could not connect to client input stream" + handShakeException);
+				log(log_enable, "handShakeException", "Could not connect to client input stream " + handShakeException);
 			}
 			try {
 				servermessage("connection success! enter your name!");
 			} catch (Exception e) {
-
 				log(log_enable, "create user", "Cannot create user " + e.getMessage());
 			}
 
@@ -123,11 +141,11 @@ public class ClientHandler implements Runnable {
 			if (!file.exists()) {
 				file.getParentFile().mkdirs();
 				file.createNewFile();
-				last_icons = icons;
+				last_icons = defaultIcons;
 			} else {
 				last_icons = loadImages(file);
 				if (last_icons == null) {
-					log_err(log_enable, "Can't send images!", "lasticons is null");
+					log_err(log_enable, "Can't get icons!", "lasticons is null");
 					return;
 				}
 			}
@@ -149,7 +167,7 @@ public class ClientHandler implements Runnable {
 			return loaded_icons;
 		} catch (Exception e) {
 			System.out.println("cant load images " + e.getMessage());
-			return icons;
+			return defaultIcons;
 		}
 	}
 
@@ -160,7 +178,7 @@ public class ClientHandler implements Runnable {
 			if (!file.exists()) {
 				file.getParentFile().mkdirs();
 				file.createNewFile();
-				last_icons = icons;
+				last_icons = defaultIcons;
 			} else {
 				last_icons = loadImages(file);
 			}
@@ -185,17 +203,19 @@ public class ClientHandler implements Runnable {
 		// log(true, "handshake", data);
 		// return;
 		Matcher orig_match = Pattern.compile("Origin: .*").matcher(data);
-		if (orig_match.find()) {
-		}
+		// if (orig_match.find()) {
+		// }
 		Matcher sec_match = Pattern.compile("Sec-WebSocket-Key: (.*)").matcher(data);
 		if (sec_match.find()) {
 			byte[] response = null;
 			origin = orig_match.group(0);
-			sec_k = encodeKey(sec_match);
+			secret_k = encodeKey(sec_match);
 			try {
-				response = ("HTTP/1.1 101 Switching Protocols\r\n" + "Connection: Upgrade\r\n"
+				response = (
+					"HTTP/1.1 101 Switching Protocols\r\n" 
+					    + "Connection: Upgrade\r\n"
 						+ "Upgrade: websocket\r\n" + "Sec-WebSocket-Accept: "
-						+ sec_k + "\r\n" + "Sec-WebSocket-Protocol: soap\r\n"
+						+ secret_k + "\r\n" + "Sec-WebSocket-Protocol: soap\r\n"
 						+ origin
 						+ "\r\n\r\n").getBytes("UTF-8");
 			} catch (Exception e) {
@@ -221,16 +241,26 @@ public class ClientHandler implements Runnable {
 
 	private void register(String values) throws IOException {
 		User user = mapper.readValue(values, User.class);
+		try {
+			helpfull_voids.source.checkPassword(user.password, 6);
+		} catch (Exception e) {
+			log_err(log_enable, "REGISTER", e.getMessage());
+			servermessage("Password error: " + e.getMessage());
+			return;
+		}
 		String request = String.format(
 				"insert into Users(name, sername,login, password, mail) values ('%s', '%s', '%s', '%s', '%s')",
 				user.name, user.secondName, user.login, user.password, user.mail);
+
 		String request1 = String.format("Select * from Users where login = '%s'", user.login);
 		String exist = Server.sql.SelectQuery(request1);
-		User res = exist.isBlank() ? null : mapper.readValue(exist, User.class);
+		User responceSQLUser = exist.isBlank() ? null : mapper.readValue(exist, User.class);
 		log(log_enable, "REGISTER", "success");
-		if (res != null && res.login.equals(user.login)) {
+
+		if (responceSQLUser != null && responceSQLUser.login.equals(user.login)) {
 			servermessage(String.format("User %s already exists", user.login));
 			closeConnection(socket, input, output);
+
 		} else
 			Server.sql.UpdateQuery(request);
 	}
@@ -284,29 +314,31 @@ public class ClientHandler implements Runnable {
 				return;
 			}
 
-			File f = new File(PATH + fileName);
-			if (f.exists() && f.length() >= file_size || file_size - f.length() <= 0)
+			File file = new File(PATH + file_name);
+			if (file.exists() && file.length() >= file_size 
+			|| file_size - file.length() <= 0)
 				return;
-			if (!f.getParentFile().exists()) {
-				f.getParentFile().mkdir();
+			if (!file.getParentFile().exists()) {
+				file.getParentFile().mkdir();
 			}
-			FileOutputStream out = new FileOutputStream(f, true);// PATH + fileName
+			FileOutputStream out = new FileOutputStream(file, true);// PATH + fileName
 			out.write(array);
 			out.close();
-			log(log_enable, "FILE READ", file_size + " == " + f.length() + "/" + " <--- " + (file_size - f.length()));
+			log(log_enable, "FILE READ",
+					file_size + " == " + file.length() + "/" + " <--- " + (file_size - file.length()));
 		} catch (Exception e) {
 			log_err(log_enable, "Cannot read file", e.getMessage());
 		}
 	}
 
-	public void sendVideoToOthers(String mess) throws IOException {
-		log(log_enable, "VIDEO SEND", mess.length());
+	public void sendVideoToOthers(String videoData) throws IOException {
+		log(log_enable, "VIDEO SEND", videoData.length());
 		List<ClientHandler> clients = current_handlers();
 		try {
 			// READ_LOCK.lock();
 			for (ClientHandler handler : clients)
-				if (showVideo) {
-					handler.writeData("::video::" + mess);
+				if (show_video) {
+					handler.writeData(VIDEO_PREF + videoData);
 					// handler.WRITE_LOCK.lock();
 				}
 		} catch (Exception e) {
@@ -318,36 +350,36 @@ public class ClientHandler implements Runnable {
 		} finally {
 			// for (ClientHandler handler : clients)
 			// handler.WRITE_LOCK.unlock();
-			videoframe = "";
+			video_frame = "";
 			// READ_LOCK.unlock();
 		}
 	}
 
 	private void sendFilesToOthers(File file) throws IOException {
-		if (fileName == "") {
+		if (file_name == "") {
 			log(log_enable, clientUserName, "Send file to others: empty file name");
 			return;
 		}
 		List<ClientHandler> clients = current_handlers();
 		try {
 			servermessage("try send file from server\n");
-			long totalLength = new File(PATH + fileName).length();
+			long totalLength = new File(PATH + file_name).length();
 
-			int BUFFER_SIZE = 18 * 1024; // kilobytes;
+			int BUFFER_SIZE = 18 * 1024; // kb;
 			byte[] buffer = new byte[BUFFER_SIZE];
-			double chunks = Math.ceil(totalLength / BUFFER_SIZE);
+			double chunks_count = Math.ceil(totalLength / BUFFER_SIZE);
 
-			log(log_enable, "FILE_SEND", "total chunks to send size is %s file name is %s".formatted(chunks, fileName));
+			log(log_enable, "FILE_SEND", "total chunks to send size is %s file name is %s".formatted(chunks_count, file_name));
 			// System.out.printf("total chunks to send size is %s file name is %s", chunks,
 			// fileName);
 			for (ClientHandler handler : clients) {
-				handler.writeData(SEND_FILE_PREF.formatted(fileName, content_type) + "::" +
-						clientUserName + "::" + chunks);
+				handler.writeData(SEND_FILE_PREF.formatted(file_name, content_type) + "::" +
+						clientUserName + "::" + chunks_count);
 				handler.WRITE_LOCK.lock();
 			}
 			FileInputStream fis = new FileInputStream(file);
 			while (fis.read(buffer, 0, BUFFER_SIZE) > 0) {
-				log(log_enable, "CHUNK", chunks -= 1);
+				log(log_enable, "CHUNK", chunks_count -= 1);
 				for (ClientHandler handler : clients)
 					handler.writeData(DatatypeConverter.printBase64Binary(buffer));
 			}
@@ -359,12 +391,7 @@ public class ClientHandler implements Runnable {
 		} catch (Exception e) {
 			System.out.println("Send to all error: " + e.getMessage());
 			servermessage(END_FILE_SEND_PREF);
-			is_file_alredy_exists = false;
-			is_file_send_to_others = false;
-			is_file_send = false;
-			fileName = "";
-			file_size = 0;
-			content_type = "";
+			resetFileData();
 		} finally {
 			servermessage("file send success!");
 			resetFileData();
@@ -383,6 +410,7 @@ public class ClientHandler implements Runnable {
 	// endregion
 
 	// #region//source code
+
 	private static byte[] encode(String mess) throws IOException {
 		byte[] rawData = mess.getBytes();
 
@@ -440,7 +468,7 @@ public class ClientHandler implements Runnable {
 		is_file_alredy_exists = false;
 		is_file_send_to_others = false;
 		is_file_send = false;
-		fileName = "";
+		file_name = "";
 		file_size = 0;
 		content_type = "";
 	}
@@ -529,8 +557,8 @@ public class ClientHandler implements Runnable {
 	private void getRecieveFileData(byte[] message) throws IOException {
 		String[] file_data = new String(message).split(FILE_PREF)[1].split("::");
 
-		fileName = file_data[0].replace(" ", "").toLowerCase();
-		if (fileName == "") {
+		file_name = file_data[0].replace(" ", "").toLowerCase();
+		if (file_name == "") {
 			is_file_send = false;
 			is_file_alredy_exists = false;
 			return;
@@ -540,12 +568,12 @@ public class ClientHandler implements Runnable {
 			file_size = Long.parseLong(file_data[2]);
 			String request = String.format(
 					"insert into Files(name, length, time) values ('%s', '%s', '%s')",
-					fileName, file_size, LocalDateTime.now().toString());
-			servermessage("file loading " + fileName);
+					file_name, file_size, LocalDateTime.now().toString());
+			servermessage("file loading " + file_name);
 			log(log_enable, "getRecieveFileData", message.toString());
 
-			File f = new File(PATH + fileName);
-			if (f.exists()) {
+			File file = new File(PATH + file_name);
+			if (file.exists()) {
 				is_file_alredy_exists = true;
 				servermessage("file already exists in server data");
 			} else {
@@ -566,6 +594,7 @@ public class ClientHandler implements Runnable {
 		int length = 0; // length of message
 		int totalRead = 0; // total read in message so far
 		String resultString = "";
+
 		while (true) {
 			int len = 0;// length of bytes read from socket
 			BufferedInputStream bf = new BufferedInputStream(input);
@@ -573,17 +602,14 @@ public class ClientHandler implements Runnable {
 				len = bf.read(buffer);
 			} catch (IOException e) {
 				log_err(log_enable, "Cant get inputStream", e.getMessage());
-				// closeConnection(socket, input, output);
-				// wait(5000);
-				// len = bf.read(buffer);
 				return "";
 			}
 			if (len != -1) {
 				boolean more = false;
 				int totalLength = 0;
 				do {
-					int j = 0;
-					int i = 0;
+					int masksIndex = 0;
+					int bufferIndex = 0;
 					if (!isSplit) {
 						byte rLength = 0;
 						int rMaskIndex = 2;
@@ -599,59 +625,58 @@ public class ClientHandler implements Runnable {
 							length += Byte.toUnsignedInt(buffer[3]);
 						} else if (rLength == (byte) 127)
 							rMaskIndex = 10;
-						for (i = rMaskIndex; i < (rMaskIndex + 4); i++) {
-							masks[j] = buffer[i];
-							j++;
+						for (bufferIndex = rMaskIndex; bufferIndex < (rMaskIndex + 4); bufferIndex++) {
+							masks[masksIndex] = buffer[bufferIndex];
+							masksIndex++;
 						}
 
 						rDataStart = rMaskIndex + 4;
 						message = new byte[length];
 						totalLength = length + rDataStart;
-						for (i = rDataStart, totalRead = 0; i < len && i < totalLength; i++, totalRead++) {
-							message[totalRead] = (byte) (buffer[i] ^ masks[totalRead % 4]);
+						for (bufferIndex = rDataStart, totalRead = 0; bufferIndex < len && bufferIndex < totalLength; bufferIndex++, totalRead++) {
+							message[totalRead] = (byte) (buffer[bufferIndex] ^ masks[totalRead % 4]);
 						}
 
 					} else {
-						for (i = 0; i < len && totalRead < length; i++, totalRead++) {
-							message[totalRead] = (byte) (buffer[i] ^ masks[totalRead % 4]);
+						for (bufferIndex = 0; bufferIndex < len && totalRead < length; bufferIndex++, totalRead++) {
+							message[totalRead] = (byte) (buffer[bufferIndex] ^ masks[totalRead % 4]);
 						}
-						totalLength = i;
+						totalLength = bufferIndex;
 					}
 					if (totalRead < length) {
 						isSplit = true;
 					} else {
 						isSplit = false;
 						String mess = new String(message);
-						// log(log_enable, "STREAM", mess.length());
-						// log(log_enable, "VIDEO", showVideo + " " + stream + " " +
-						// videoframe.length());
 						if (mess.startsWith(STREAM_START_PREF)) {
-							stream = true;
+							is_streaming = true;
+							log(log_enable, "STREAM start", mess.length());
 							servermessage("start stream");
 							return resultString;
 						}
-						if (mess.contains(VIDEO_PREF) && stream) {
-							showVideo = true;
+						if (mess.contains(VIDEO_PREF) && is_streaming) {
+							show_video = true;
 							return resultString;
 						}
 						if (mess.contains(STREAM_END_PREF)) {
-							videoframe = "";
+							video_frame = "";
 							mess = "";
 							List<ClientHandler> clients = current_handlers();
 							for (ClientHandler handler : clients) {
 								handler.input.skip(handler.input.available());
-								handler.showVideo = false;
-								handler.stream = false;
+								handler.show_video = false;
+								handler.is_streaming = false;
 							}
 							bf.skip(bf.available());
-							showVideo = false;
-							stream = false;
+							show_video = false;
+							is_streaming = false;
+							log(log_enable, "STREAM end", mess.length());
 							servermessage("end stream");
 							resultString = "";
 							return "";
 						}
 						if (mess.contains(VIDEO_END_PREF)) {
-							sendVideoToOthers(videoframe);
+							sendVideoToOthers(video_frame);
 							return resultString;
 						}
 						if (mess.startsWith(NAME_PREF)) {
@@ -663,35 +688,32 @@ public class ClientHandler implements Runnable {
 							return resultString;
 						}
 						if (mess.startsWith(NEW_ICON_PREF)) {
-							saveIcons(new String(mess.split("::new_icon::")[1]));
+							saveIcons(new String(mess.split(NEW_ICON_PREF)[1]));
 							return resultString;
 						}
 						if (mess.startsWith(FILE_PREF)) {
 							getRecieveFileData(message);
-							return is_file_alredy_exists && fileName != "" ? RECIVE_FILE : "";
+							return is_file_alredy_exists && file_name != "" ? RECIVE_FILE : "";
 						}
 						if (mess.equals(END_FILE_SEND_PREF)) {
 							is_file_send = false;
 							boolean wasLoaded = is_file_alredy_exists;
 							is_file_alredy_exists = false;
 							if (wasLoaded) {
-								is_file_send_to_others = false;
-								is_file_send = false;
-								fileName = "";
-								file_size = 0;
-								content_type = "";
+								resetFileData();
 								return "";
-							} else if (fileName != "")
+							} else if (file_name != "")
 								return RECIVE_FILE;
 						}
 						if (!is_file_alredy_exists) {
 							if (is_file_send)
 								readfile(message);
-							if (showVideo)
-								videoframe += mess;
-							if (clientUserName != START_CLIENT_NAME 
-							&& clientUserName != REGISTER_PREF 
-							&& !stream && !is_file_send) {
+							if (show_video)
+								video_frame += mess;
+							if (clientUserName != START_CLIENT_NAME
+								&& clientUserName != REGISTER_PREF
+								&& !is_streaming 
+								&& !is_file_send) {
 								resultString = clientUserName + ": " + new String(message);
 								return resultString;
 							}
@@ -701,8 +723,8 @@ public class ClientHandler implements Runnable {
 					}
 					if (totalLength < len) {
 						more = true;
-						for (i = totalLength, j = 0; i < len; i++, j++)
-							buffer[j] = buffer[i];
+						for (bufferIndex = totalLength, masksIndex = 0; bufferIndex < len; bufferIndex++, masksIndex++)
+							buffer[masksIndex] = buffer[bufferIndex];
 						len = len - totalLength;
 
 					} else
@@ -714,96 +736,25 @@ public class ClientHandler implements Runnable {
 		return resultString;
 	}
 
-	// private String ReadInputData(byte[] message) throws IOException {
-	// String resultString = "";
-	// String mess = new String(message);
-	// if (mess.startsWith(VIDEO_PREF) && stream) {
-	// showVideo = true;
-	// return resultString;
-	// }
-	// if (mess.startsWith(STREAM_START_PREF)) {
-	// stream = true;
-	// servermessage("start stream");
-	// return resultString;
-	// }
-	// if (mess.startsWith(STREAM_END_PREF)) {
-	// videoframe = "";
-	// showVideo = false;
-	// stream = false;
-	// servermessage("end stream");
-	// return resultString;
-	// }
-	// if (mess.startsWith(VIDEO_END_PREF)) {
-	// sendVideoToOthers(videoframe);
-	// return resultString;
-	// }
-	// if (mess.startsWith(NAME_PREF)) {
-	// setClientName(mess);
-	// return resultString;
-	// }
-	// if (mess.startsWith(REGISTER)) {
-	// register(new String(mess.replace(REGISTER, "")));
-	// return resultString;
-	// }
-	// if (mess.startsWith(NEW_ICON_PREF)) {
-	// saveIcons(new String(mess.split("::new_icon::")[1]));
-	// return resultString;
-	// }
-	// if (mess.startsWith(FILE_PREF)) {
-	// getRecieveFileData(message);
-	// return is_file_alredy_exists && fileName != "" ? RECIVE_FILE : "";
-	// }
-	// if (mess.equals(END_FILE_SEND_PREF)) {
-	// is_file_send = false;
-	// boolean wasLoaded = is_file_alredy_exists;
-	// is_file_alredy_exists = false;
-	// if (wasLoaded) {
-	// is_file_send_to_others = false;
-	// is_file_send = false;
-	// fileName = "";
-	// file_size = 0;
-	// content_type = "";
-	// return "";
-	// } else if (fileName != "")
-	// return RECIVE_FILE;
-	// }
-	// if (!is_file_alredy_exists) {
-	// if (is_file_send)
-	// readfile(message);
-	// if (showVideo)
-	// videoframe += mess;
-	// else if (clientUserName != START_CLIENT_NAME && clientUserName !=
-	// REGISTER_PREF) {
-	// resultString = clientUserName + ": " + new String(message);
-	// return resultString;
-	// }
-	// }
-	// return resultString;
-	// }
-
 	@Override
 	public void run() {
 		while (!socket.isClosed()) {
 			try {
-				String res = printInputStream();
-				if (res == RECIVE_FILE) {
+				String incommingData = printInputStream();
+				if (incommingData == RECIVE_FILE) {
 					is_file_send_to_others = true;
 					try {
-						sendFilesToOthers(new File(PATH + fileName));
+						sendFilesToOthers(new File(PATH + file_name));
 					} catch (Exception e) {
 						log_err(log_enable, "Error in sending file", e.getMessage());
 						resetFileData();
 					} finally {
 						resetFileData();
 					}
-				} else if (!is_file_send && !is_file_send_to_others && !showVideo)
-					broadcastMessage(res);
-				// if(res=="::close::"){
-				// closeConnection(socket, input, output);
-				// }
+				} else if (!is_file_send && !is_file_send_to_others && !show_video)
+					broadcastMessage(incommingData);
 			} catch (Exception e) {
 				log_err(log_enable, "Run main exeption", e.getMessage());
-				// closeConnection(socket, input, output);
 				return;
 			}
 		}

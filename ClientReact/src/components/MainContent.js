@@ -10,28 +10,33 @@ import { setMessage, setMessageHistory, setRecieveMessage } from '../redux/slice
 import { createIcon, setshowIcons } from '../redux/slices/iconsSlice';
 import { setShowVideo } from '../redux/slices/settingsSlice';
 import { m_card_h_m, m_icon_b, m_send_b, m_text, m_video_b } from '../constants/bootStrapStyles';
-import { icon_icon, send_file_icon, send_icon, video_icon } from './helpfullIcons';
+import { icon_icon, send_file_icon, send_icon, video_icon } from '../constants/form_Icons';
 import { addImgTxt, saveImgTxt, sendFileTxt, sendMessTxt, simvolPlaseholderTxt, srcPlaseholderTxt, videoTxt, welcomeTxt } from '../constants/elementsText';
 import { iconsTxt } from './../constants/elementsText';
 
 const MainContent = () => {
   const name = useSelector(state => state.name.name);
-  const color = useSelector(state => state.color)
+  const color = useSelector(state => state.color);
   const message = useSelector(state => state.message);
   const icon = useSelector(state => state.icon);
   const showVideo = useSelector(state => state.settings.showVideo);
+
   const showText = useSelector(state => state.settings.showText);
   const showAllIcons = useSelector(state => state.settings.showAllIcons);
+
   const dispatch = useDispatch();
   const { webSocket } = useContext(app_context)
+  
   let current_message = "";
   current_message = message.recieveMessage;
-  webSocket.onerror = (eve) => {
-    dispatch(setMessageHistory((date(new Date()) + " Server: error! connection was closed " + eve.data)));
+  
+  webSocket.onerror = (event) => {
+    dispatch(setMessageHistory((date(new Date()) + " Server: error! connection was closed " + event.data)));
     dispatch(setRecieveMessage(''));
     dispatch(setshowIcons(false));
     dispatch(setMessage(false));
   }
+  
   const sendMessage = async () => {
     if (current_message && current_message !== " ") {
       dispatch(setMessageHistory((date(new Date()) + " " + name + ": " + current_message)));
@@ -117,7 +122,6 @@ const MainContent = () => {
           {icons.map((x, i) => <img key={i} alt={i} src={x.src} onClick={() => {
             current_message += x.simvol;
             dispatch(setRecieveMessage(current_message));
-            //dispatch(changeMessageStatus());
           }} />)}
         </div>
         <div className='col-6 text-end'>

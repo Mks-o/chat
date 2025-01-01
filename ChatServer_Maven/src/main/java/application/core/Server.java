@@ -13,7 +13,7 @@ import java.util.List;
 public class Server {
 	private ServerSocket serverSocket;
 	static List<ClientHandler> CLIENTS_HANDLERS = new ArrayList<>();
-	int logBack = 50;
+	//int logBack = 50;
 	//InetAddress address = InetAddress.getByName("127.0.0.1");
 	static SQL_core sql = new SQL_core();
 
@@ -48,6 +48,5 @@ public class Server {
 		} catch (Exception e) {
 			log_err(log_enable,"SERVER",e.getMessage());
 		}
-
 	}
 }

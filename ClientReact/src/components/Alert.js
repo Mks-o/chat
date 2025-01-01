@@ -7,7 +7,8 @@ const Alert = () => {
     const alert = useSelector(state => state.alert.alert);
     const dispatch = useDispatch();
     return (
-        <div className={alert_m}>{alert}
+        <div className={alert_m}>
+            {alert}
             <button className={alert_btn} onClick={() =>dispatch( setAlert(""))}>OK</button>
         </div>
     );

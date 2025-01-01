@@ -13,7 +13,7 @@ import { setAlert } from './redux/slices/alertSlice';
 import { setProgress } from './redux/slices/progressSlice';
 import { changeMessageStatus, setMessageHistory, setRecieveMessage } from './redux/slices/messageSlice';
 import { setShowVideo } from './redux/slices/settingsSlice';
-import { disconect_prefix, file_end_load, file_exists, file_prefix, icons_prefix, limit_msg, stream_end, video_prefix } from './constants/controls';
+import { disconect_prefix, file_end_load, file_exists, file_prefix, icons_prefix, limit_msg, stream_end, stream_start, video_end_prefix, video_prefix } from './constants/controls';
 import { btn_d_6, btn_s_6, m_card, m_card_h, mov_btn, prog_s, video_s } from './constants/bootStrapStyles';
 import { playTxt, stopTxt } from './constants/elementsText';
 import { setName } from './redux/slices/nameSlice';
@@ -27,6 +27,7 @@ let source_buffer_update_id = 0;
 var reader = new FileReader();
 let videoCunks = [];
 let isVideoCreated = false;
+
 function App() {
   const progress = useSelector(state => state.progress.progress)
   const color = useSelector(state => state.color);
@@ -34,12 +35,11 @@ function App() {
   const name = useSelector(state => state.name.name);
   const showVideo = useSelector(state => state.settings.showVideo);
   const dispatch = useDispatch();
-  
-  useEffect(() => {
-    if (webSocket.CLOSED || webSocket.CLOSING) {
-      //webSocket = createWebSocket(url);
+
+  useEffect(() => {//when close page
+    if (webSocket.CLOSED || webSocket.CLOSING) 
       recreatewebSocket(webSocket);
-    }
+    
     const unloadCallback = (event) => {
       event.preventDefault();
       try {
@@ -56,13 +56,13 @@ function App() {
 
   }, []);
   console.log(webSocket);
-  
+
   useEffect(() => {
     // Listen for incoming messages from the server
     webSocket.onmessage = (event) => {
       try {
         if (event && event.data) {
-          if (event.data.includes(disconect_prefix))disconect(dispatch);
+          if (event.data.includes(disconect_prefix)) disconect(dispatch);
           if (webSocket.fileData.filename !== "" && event.data.includes(file_exists)) {
             webSocket.fileData.fileExists = true;
           }
@@ -158,10 +158,10 @@ function App() {
   let createSecondVideo = () => {
     console.log("create");
     var video = document.getElementById("video");
-    
+
     mediaSource = new MediaSource();
     sourceBuffer = null;
-    videoCunks.splice(1,1);
+    videoCunks.splice(1, 1);
     video.autoplay = true;
     video.controls = true;
     video.srcObject = null;
@@ -178,8 +178,8 @@ function App() {
             stop();
             return;
           }
-          if(sourceBuffer!==null && videoCunks.length>0)
-          sourceBuffer?.appendBuffer(videoCunks?.shift());
+          if (sourceBuffer !== null && videoCunks.length > 0)
+            sourceBuffer?.appendBuffer(videoCunks?.shift());
 
         } catch (error) {
           console.log(error.message);
@@ -211,35 +211,34 @@ function App() {
     })
     videoCunks = [];
     clearInterval(source_buffer_update_id);
-    webSocket.send('::streamStart::')
-    reader.addEventListener("loadend", async function () {
-      if(!showVideo)return;
+    webSocket.send(stream_start);
+    reader.onloadend = async () => {
+      if (!showVideo) return;
       var arr = btoa(new Uint8Array(reader.result));
       //console.log(arr);
-      const filesize = arr.length;
-      let size = 16 * 1024;
-      const chunksSize = Math.ceil(filesize / size);
+      const filesize = arr.length;//total reader result bytes length
+      let size = 16 * 1024;//size of 1 chunk
+      const chunksSize = Math.ceil(filesize / size);// chunks count
       console.log("total chunks size is %s file size: %s", chunksSize, filesize);
       let chunks = [];
-      webSocket.send('::video::')
+      webSocket.send(video_prefix)
       for (let i = 0; i < filesize; i += size) {
         let start = i;
         let end = i + size > filesize ? filesize : i + size;
         let d = arr.slice(start, end)
         chunks.push(d);
       }
-      chunks.push('::videoEnd::');
+      chunks.push(video_end_prefix);
       chunks.map((value, index) =>
         setTimeout(() => {
-         if(showVideo)
-          webSocket.send(value)
+          if (showVideo)
+            webSocket.send(value)
         }, 0.2 * index))
-    });
+    };
     mediaRecorder.ondataavailable = (event) => {
       try {
         reader.readAsArrayBuffer(event.data);
       } catch (error) {
-        console.log(error);
         reader = new FileReader();
         mediaSource = new MediaSource();
         sourceBuffer = null;
@@ -249,7 +248,7 @@ function App() {
     mediaRecorder.start(500);
   }).catch((error) => {
     console.log(error.message);
-    dispatch(setAlert("Share "+error.message))
+    dispatch(setAlert("Share " + error.message))
     stop();
   });
 
@@ -257,7 +256,7 @@ function App() {
     let video = document.getElementById('video')
     try {
       try {
-        if (mediaSource && mediaSource.readyState==="open")
+        if (mediaSource && mediaSource.readyState === "open")
           mediaSource.endOfStream();
       } catch (error) {
         console.log(error.message);
@@ -285,25 +284,20 @@ function App() {
 
       //dispatch(setAlert("sourceBuffer " + error.message))
     }
-    // try {
-    // } catch (error) {
-    //   console.log(error.message);
-    //   //dispatch(setAlert(error.message))
-    // }
-    
+
     isVideoCreated = false;
     dispatch(setShowVideo(false));
-    webSocket.send('::streamEnd::')
+    webSocket.send(stream_end)
   }
 
   //#endregion
- 
+
   let disconect = () => {
     if (webSocket.OPEN) {
       try {
         webSocket.send("disconect");
       } catch (error) {
-        console.log("disconect "+error.message)
+        console.log("disconect " + error.message)
       }
     }
     webSocket.close();
@@ -316,7 +310,7 @@ function App() {
 
   return (
     <app_context.Provider value={{
-      webSocket,disconect
+      webSocket, disconect
     }}>
       <div className="App">
         <div className={m_card + textColor(color.color)}
