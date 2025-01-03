@@ -1,13 +1,13 @@
 This is chat app. Some chat functions...
-You can send files images videos and other files...
-In chat i try to create view for difference file types like ogg pnj mp4 and others.
+You can send files images, videos and other files from one webview to another...
+In chat i try to create view for difference file types like ogg png jpeg mp4 and others.
 Release streaming function like in zoom.
 Downloadable icons available!)
 Run...
 Run sql server on localhost:3036,
-Start controller and then run front end react app.
+Start controller and then run front end react app with command's: -npm install (for install package folder) and then -npm start.
 or download controller in docker pull mksrt/chat:controller
-  and then use: docker compose up
+  and then use console command: docker compose up
   http://localhost:8081/⁠ - 1st web front view
   http://localhost:8082/⁠ - 2nd web front view
   sql database in default localhost:3036
